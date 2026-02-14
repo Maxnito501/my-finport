@@ -13,8 +13,8 @@ st.set_page_config(
 
 # --- ฟังก์ชันคำนวณ ---
 def calculate_wealth(assets_df, liabs_df):
-    t_a = assets_df["มูลค่า"].sum()
-    t_l = liabs_df["มูลค่า"].sum()
+    t_a = assets_df["มูลค่า"].sum() if not assets_df.empty else 0
+    t_l = liabs_df["มูลค่า"].sum() if not liabs_df.empty else 0
     return t_a, t_l, t_a - t_l
 
 # --- เริ่มต้นข้อมูล (Mock Data สำหรับการเปิดแอปครั้งแรก) ---
@@ -70,15 +70,19 @@ left_col, right_col = st.columns([2, 1])
 
 with left_col:
     st.subheader("📊 สัดส่วนการลงทุนแยกตามประเภท")
-    fig = px.pie(
-        st.session_state.assets, 
-        values='มูลค่า', 
-        names='หมวดหมู่', 
-        hole=0.4,
-        color_discrete_sequence=px.colors.qualitative.Pastel
-    )
-    fig.update_traces(textposition='inside', textinfo='percent+label')
-    st.plotly_chart(fig, use_container_width=True)
+    # ตรวจสอบว่ามีข้อมูลสินทรัพย์หรือไม่ก่อนวาดกราฟ เพื่อป้องกัน ValueError
+    if not st.session_state.assets.empty and st.session_state.assets["มูลค่า"].sum() > 0:
+        fig = px.pie(
+            st.session_state.assets, 
+            values='มูลค่า', 
+            names='หมวดหมู่', 
+            hole=0.4,
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("💡 ยังไม่มีข้อมูลสินทรัพย์เพื่อแสดงสัดส่วนการลงทุน กรุณาเพิ่มข้อมูลที่ช่องด้านขวา")
 
 with right_col:
     st.subheader("➕ เพิ่มรายการใหม่")
@@ -119,8 +123,8 @@ st.sidebar.title("📈 วิเคราะห์ความเสี่ยง
 high_risk_cats = ["หุ้นเติบโต/หุ้นซิ่ง", "หุ้น/กองทุนดัชนี", "หุ้นปันผล", "สินทรัพย์ทางเลือก (ทองคำ/คริปโต)"]
 low_risk_cats = ["เงินสด/เงินฝาก", "กบข./กองทุนสำรองฯ", "หุ้นกู้/หุ้นสหกรณ์", "กองทุนลดหย่อนภาษี (RMF/SSF)"]
 
-risk_high = st.session_state.assets[st.session_state.assets['หมวดหมู่'].isin(high_risk_cats)]['มูลค่า'].sum()
-risk_low = st.session_state.assets[st.session_state.assets['หมวดหมู่'].isin(low_risk_cats)]['มูลค่า'].sum()
+risk_high = st.session_state.assets[st.session_state.assets['หมวดหมู่'].isin(high_risk_cats)]['มูลค่า'].sum() if not st.session_state.assets.empty else 0
+risk_low = st.session_state.assets[st.session_state.assets['หมวดหมู่'].isin(low_risk_cats)]['มูลค่า'].sum() if not st.session_state.assets.empty else 0
 
 total_val = risk_high + risk_low
 if total_val > 0:
@@ -137,6 +141,8 @@ if total_val > 0:
         st.sidebar.info("พอร์ตของคุณเน้นความมั่นคงเป็นหลัก (Low Risk Heavy)")
     else:
         st.sidebar.success("พอร์ตของคุณมีความสมดุลระหว่างความเสี่ยงและความมั่นคง")
+else:
+    st.sidebar.write("รอข้อมูลเพื่อวิเคราะห์ความเสี่ยง...")
 
 st.sidebar.divider()
 st.sidebar.caption("หมายเหตุ: หุ้นสหกรณ์ถูกจัดอยู่ในกลุ่มสินทรัพย์มั่นคงเนื่องจากปันผลสม่ำเสมอ")
